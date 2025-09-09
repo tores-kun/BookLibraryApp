@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Разрешаем незашифрованный HTTP только к нужному IP -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.93.2.6</domain>
+    </domain-config>
+</network-security-config>

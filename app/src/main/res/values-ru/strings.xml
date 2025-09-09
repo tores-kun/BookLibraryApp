@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Библиотека книг</string>
+
+    <!-- Navigation -->
+    <string name="nav_catalog">Каталог</string>
+    <string name="nav_bookmarks">Закладки</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="nav_back">Назад</string>
+
+    <!-- Catalog -->
+    <string name="search_books">Поиск книг...</string>
+    <string name="filter_all">Все</string>
+    <string name="sort_by_date">По дате</string>
+    <string name="sort_by_title">По названию</string>
+    <string name="sort_by_chapters">По главам</string>
+
+    <!-- Book Details -->
+    <string name="book_details">Детали книги</string>
+    <string name="chapters_count">Глав: %d</string>
+    <string name="language">Язык: %s</string>
+    <string name="translator">Переводчик: %s</string>
+    <string name="genres">Жанры</string>
+    <string name="description">Описание</string>
+
+    <!-- Actions -->
+    <string name="action_read">Читать</string>
+    <string name="action_download">Скачать EPUB</string>
+    <string name="action_bookmark">Добавить в закладки</string>
+    <string name="action_notes">Заметки</string>
+    <string name="action_remove_bookmark">Удалить закладку</string>
+
+    <!-- Bookmark Status -->
+    <string name="bookmark_reading">Читаю</string>
+    <string name="bookmark_paused">Пауза</string>
+    <string name="bookmark_finished">Завершено</string>
+    <string name="current_chapter">Текущая глава</string>
+
+    <!-- Reader -->
+    <string name="chapter_number">Глава %d</string>
+    <string name="font_size">Размер шрифта</string>
+    <string name="reader_theme">Тема</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_sepia">Сепия</string>
+    <string name="tts_start">Озвучить</string>
+    <string name="tts_stop">Остановить</string>
+
+    <!-- Settings -->
+    <string name="settings">Настройки</string>
+    <string name="network_settings">Настройки сети</string>
+    <string name="base_url">Базовый URL</string>
+    <string name="network_profile">Профиль сети</string>
+    <string name="profile_http">HTTP (локально)</string>
+    <string name="profile_https">HTTPS (локально)</string>
+    <string name="tts_settings">Настройки TTS</string>
+    <string name="tts_speed">Скорость речи</string>
+    <string name="tts_pitch">Высота тона</string>
+    <string name="reader_settings">Настройки читалки</string>
+
+    <!-- Download -->
+    <string name="downloading">Скачивание: %d%%</string>
+    <string name="download_complete">Скачивание завершено</string>
+    <string name="download_error">Ошибка скачивания</string>
+    <string name="already_downloaded">Уже скачано</string>
+
+    <!-- Notes -->
+    <string name="notes">Заметки</string>
+    <string name="add_note">Добавить заметку</string>
+    <string name="edit_note">Редактировать заметку</string>
+    <string name="note_text">Текст заметки</string>
+    <string name="note_chapter">Глава</string>
+
+    <!-- Common -->
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="delete">Удалить</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="error">Ошибка</string>
+    <string name="loading">Загрузка...</string>
+    <string name="no_data">Нет данных</string>
+    <string name="retry">Повторить</string>
+</resources>
