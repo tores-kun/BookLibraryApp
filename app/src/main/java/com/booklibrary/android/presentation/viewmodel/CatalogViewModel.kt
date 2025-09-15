@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.booklibrary.android.domain.model.*
 import com.booklibrary.android.domain.usecase.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi // Убедитесь, что этот импорт есть или добавьте его
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class) // <--- ДОБАВЛЕНА ЭТА АННОТАЦИЯ
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
     private val getBooksUseCase: GetBooksUseCase,

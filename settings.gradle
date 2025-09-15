@@ -10,14 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-    }
-}
-
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://github.com/psiegman/mvn-repo/raw/master/releases' }
+        maven { url 'https://github.com/psiegman/mvn-repo/raw/master/releases' } // Preserving this custom repo
     }
 }
 

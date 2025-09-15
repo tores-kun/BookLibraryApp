@@ -17,9 +17,9 @@
 
     <!-- Book Details -->
     <string name="book_details">Детали книги</string>
-    <string name="chapters_count">Глав: %d</string>
-    <string name="language">Язык: %s</string>
-    <string name="translator">Переводчик: %s</string>
+    <string name="chapter_count">Глав: %1$d</string>
+    <string name="language">Язык: %1$s</string>
+    <string name="translator">Переводчик: %1$s</string>
     <string name="genres">Жанры</string>
     <string name="description">Описание</string>
 
@@ -37,7 +37,7 @@
     <string name="current_chapter">Текущая глава</string>
 
     <!-- Reader -->
-    <string name="chapter_number">Глава %d</string>
+    <string name="chapter_number">Глава %1$d</string>
     <string name="font_size">Размер шрифта</string>
     <string name="reader_theme">Тема</string>
     <string name="theme_light">Светлая</string>
@@ -59,7 +59,7 @@
     <string name="reader_settings">Настройки читалки</string>
 
     <!-- Download -->
-    <string name="downloading">Скачивание: %d%%</string>
+    <string name="downloading">Скачивание: %1$d%%</string>
     <string name="download_complete">Скачивание завершено</string>
     <string name="download_error">Ошибка скачивания</string>
     <string name="already_downloaded">Уже скачано</string>

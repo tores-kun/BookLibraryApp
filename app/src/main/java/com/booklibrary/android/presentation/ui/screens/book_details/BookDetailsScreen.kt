@@ -10,11 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.booklibrary.android.R
 import com.booklibrary.android.presentation.viewmodel.BookDetailsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,10 +38,10 @@ fun BookDetailsScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         TopAppBar(
-            title = { Text("Детали книги") },
+            title = { Text(stringResource(R.string.book_details)) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Назад")
+                    Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
                 }
             }
         )
@@ -63,8 +65,22 @@ fun BookDetailsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Создаем полный URL для обложки
+                        val baseUrl = "http://10.93.2.6:8080"
+                        val fullCoverUrl = if (book.coverUrl?.startsWith("http") == true) { // Явно проверяем на true
+                            book.coverUrl
+                        } else {
+                            // Обрабатываем случай, когда book.coverUrl равен null или не начинается с "http"
+                            if (book.coverUrl != null) {
+                                baseUrl.trimEnd('/') + book.coverUrl
+                            } else {
+                                // Укажите URL по умолчанию или обработайте случай отсутствия URL обложки
+                                "" // Или URL какого-нибудь изображения-заполнителя
+                            }
+                        }
+
                         AsyncImage(
-                            model = book.coverUrl,
+                            model = fullCoverUrl,
                             contentDescription = "Обложка книги",
                             modifier = Modifier
                                 .width(120.dp)
@@ -83,19 +99,20 @@ fun BookDetailsScreen(
 
                             Spacer(modifier = Modifier.height(8.dp))
 
+                            // Используем stringResource с параметрами вместо строковой интерполяции
                             Text(
-                                text = "Глав: \${book.chapterCount}",
+                                text = stringResource(R.string.chapter_count, book.chapterCount),
                                 style = MaterialTheme.typography.bodyMedium
                             )
 
                             Text(
-                                text = "Язык: \${book.language}",
+                                text = stringResource(R.string.language, book.language),
                                 style = MaterialTheme.typography.bodyMedium
                             )
 
                             if (book.translator.isNotEmpty()) {
                                 Text(
-                                    text = "Переводчик: \${book.translator}",
+                                    text = stringResource(R.string.translator, book.translator),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -105,10 +122,11 @@ fun BookDetailsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Жанры:",
+                        text = stringResource(R.string.genres),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
+
                     Text(
                         text = book.genres.joinToString(", "),
                         style = MaterialTheme.typography.bodyMedium
@@ -117,10 +135,11 @@ fun BookDetailsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Описание:",
+                        text = stringResource(R.string.description),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
+
                     Text(
                         text = book.description,
                         style = MaterialTheme.typography.bodyMedium
@@ -138,7 +157,7 @@ fun BookDetailsScreen(
                         ) {
                             Icon(Icons.Filled.MenuBook, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Читать")
+                            Text(stringResource(R.string.action_read))
                         }
 
                         if (!book.isDownloaded) {
@@ -148,7 +167,7 @@ fun BookDetailsScreen(
                             ) {
                                 Icon(Icons.Filled.Download, contentDescription = null)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Скачать EPUB")
+                                Text(stringResource(R.string.action_download))
                             }
                         }
 
@@ -158,7 +177,7 @@ fun BookDetailsScreen(
                         ) {
                             Icon(Icons.Filled.Note, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Заметки")
+                            Text(stringResource(R.string.action_notes))
                         }
                     }
                 }

@@ -23,9 +23,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.booklibrary.android.R
 import com.booklibrary.android.presentation.ui.components.BookCard
 import com.booklibrary.android.presentation.ui.components.GenreFilterChips
 import com.booklibrary.android.presentation.ui.components.SearchBar
@@ -47,13 +49,14 @@ fun CatalogScreen(
     ) {
         // Top App Bar
         TopAppBar(
-            title = { Text("Библиотека книг") },
+            title = { Text(stringResource(R.string.app_name)) },
             actions = {
                 IconButton(onClick = onNavigateToBookmarks) {
-                    Icon(Icons.Filled.Bookmark, contentDescription = "Закладки")
+                    Icon(Icons.Filled.Bookmark, contentDescription = stringResource(R.string.nav_bookmarks))
                 }
+
                 IconButton(onClick = onNavigateToSettings) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Настройки")
+                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nav_settings))
                 }
             }
         )
@@ -89,13 +92,22 @@ fun CatalogScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(books) { book ->
+                    // Создаем полный URL для обложки каждой книги
+                    val baseUrl = "http://10.93.2.6:8080"
+                    val fullCoverUrl = if (book.coverUrl?.startsWith("http") == true) {
+                        book.coverUrl
+                    } else {
+                        book.coverUrl?.let { baseUrl.trimEnd('/') + it } ?: "your_placeholder_image_url_or_empty_string"
+                    }
+
                     BookCard(
-                        book = book,
+                        book = book.copy(coverUrl = fullCoverUrl),
                         onClick = { onBookClick(book.id) },
                         onBookmarkToggle = { viewModel.toggleBookmark(book) },
                         onDownload = { viewModel.downloadBook(book) },
                         downloadProgress = uiState.downloadProgress[book.id]
                     )
+
                 }
             }
         }
