@@ -43,6 +43,9 @@ fun CatalogScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val books by viewModel.books.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val selectedGenre by viewModel.selectedGenreState.collectAsStateWithLifecycle() // Added
+    val availableGenres by viewModel.availableGenres.collectAsStateWithLifecycle() // Added
 
     Column(
         modifier = Modifier.fillMaxSize()
@@ -63,7 +66,7 @@ fun CatalogScreen(
 
         // Search Bar
         SearchBar(
-            query = "",
+            query = searchQuery, 
             onQueryChange = viewModel::onSearchQueryChange,
             modifier = Modifier
                 .fillMaxWidth()
@@ -72,7 +75,8 @@ fun CatalogScreen(
 
         // Genre Filters
         GenreFilterChips(
-            selectedGenre = null,
+            genres = availableGenres, // Assuming this parameter name
+            selectedGenre = selectedGenre, 
             onGenreSelected = viewModel::onGenreFilterChange,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
@@ -115,6 +119,8 @@ fun CatalogScreen(
 
     uiState.error?.let { error ->
         LaunchedEffect(error) {
+            // Consider showing a Snackbar or Toast for the error
+            // For now, it just clears the error
             viewModel.clearError()
         }
     }

@@ -36,11 +36,6 @@ enum class BookmarkStatus(val value: String) {
     }
 }
 
-data class Genre(
-    val name: String,
-    val count: Int
-)
-
 data class Note(
     val id: Int,
     val bookId: Int,

@@ -58,24 +58,29 @@ fun SearchBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreFilterChips(
+    genres: List<String>, // <--- ПАРАМЕТР ДОБАВЛЕН
     selectedGenre: String?,
     onGenreSelected: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val genres = listOf(
-        "Все", "Фэнтези", "Классика", "Приключения",
-        "Научная фантастика", "Детская литература"
-    )
-
     LazyRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
-        items(genres) { genre ->
+        // Чип "Все" для сброса фильтра
+        item { // Добавляем "Все" как отдельный item, чтобы он всегда был первым
             FilterChip(
-                selected = if (genre == "Все") selectedGenre == null else selectedGenre == genre,
-                onClick = { onGenreSelected(if (genre == "Все") null else genre) },
+                selected = selectedGenre == null, 
+                onClick = { onGenreSelected(null) }, 
+                label = { Text("Все") }
+            )
+        }
+        // Динамические чипы для жанров из ViewModel
+        items(genres) { genre -> 
+            FilterChip(
+                selected = selectedGenre == genre,
+                onClick = { onGenreSelected(genre) },
                 label = { Text(genre) }
             )
         }

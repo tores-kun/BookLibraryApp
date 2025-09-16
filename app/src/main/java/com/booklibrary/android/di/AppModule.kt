@@ -31,6 +31,7 @@ object DatabaseModule {
             BookLibraryDatabase::class.java,
             "book_library_database"
         )
+        .addMigrations(BookLibraryDatabase.MIGRATION_1_2)
         .fallbackToDestructiveMigration()
         .build()
     }

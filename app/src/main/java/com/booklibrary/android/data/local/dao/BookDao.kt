@@ -9,11 +9,25 @@ interface BookDao {
     @Query("SELECT * FROM books")
     fun getAllBooks(): Flow<List<BookEntity>>
 
+    @Query("""
+        SELECT books.* FROM books
+        INNER JOIN book_genres ON books.id = book_genres.bookId
+        WHERE book_genres.genreName = :genreName
+    """)
+    fun getBooksByGenre(genreName: String): Flow<List<BookEntity>>
+
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getBookById(bookId: Int): BookEntity?
 
     @Query("SELECT * FROM books WHERE title LIKE :query OR description LIKE :query")
     fun searchBooks(query: String): Flow<List<BookEntity>>
+
+    @Query("""
+        SELECT books.* FROM books
+        INNER JOIN book_genres ON books.id = book_genres.bookId
+        WHERE book_genres.genreName = :genreName AND (books.title LIKE :query OR books.description LIKE :query)
+    """)
+    fun searchBooksByQueryAndGenre(query: String, genreName: String): Flow<List<BookEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBooks(books: List<BookEntity>)
@@ -26,22 +40,12 @@ interface BookDao {
 
     @Delete
     suspend fun deleteBook(book: BookEntity)
+
+    @Query("DELETE FROM books") // Added this method
+    suspend fun deleteAllBooks() // Added this method
 }
 
-@Dao
-interface GenreDao {
-    @Query("SELECT * FROM genres")
-    fun getAllGenres(): Flow<List<GenreEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertGenres(genres: List<GenreEntity>)
-
-    @Query("SELECT * FROM book_genres WHERE bookId = :bookId")
-    suspend fun getGenresForBook(bookId: Int): List<BookGenreEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBookGenres(bookGenres: List<BookGenreEntity>)
-}
+// GenreDao interface was here and has been removed
 
 @Dao
 interface BookmarkDao {

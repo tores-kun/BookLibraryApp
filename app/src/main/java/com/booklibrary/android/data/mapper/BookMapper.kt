@@ -82,10 +82,6 @@ fun Bookmark.toEntity(): BookmarkEntity {
     )
 }
 
-fun GenreDto.toEntity(): GenreEntity {
-    return GenreEntity(name = name)
-}
-
 fun GenreEntity.toDomain(count: Int = 0): Genre {
     return Genre(name = name, count = count)
 }

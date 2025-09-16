@@ -36,11 +36,6 @@ data class BookmarkDto(
     val lastUpdated: String
 )
 
-data class GenreDto(
-    val name: String,
-    val count: Int
-)
-
 data class NoteDto(
     val id: Int? = null,
     @SerializedName("book_id")

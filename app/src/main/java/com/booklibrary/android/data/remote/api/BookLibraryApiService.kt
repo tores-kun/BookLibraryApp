@@ -14,8 +14,8 @@ interface BookLibraryApiService {
         @Query("sort") sort: String = "date_added",
         @Query("order") order: String = "desc",
         @Query("bookmark_status") bookmarkStatus: String? = null,
-        @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 20
+        @Query("page") page: Int = 1, // Оставляем пагинацию, если она используется или понадобится
+        @Query("limit") limit: Int? = null // Изменено на Int? = null
     ): Response<BookResponse>
 
     @GET("api/books/{id}")
