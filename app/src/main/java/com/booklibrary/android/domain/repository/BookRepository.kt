@@ -25,6 +25,7 @@ interface BookRepository {
 
     suspend fun downloadBook(bookId: Int): Flow<DownloadProgress>
     suspend fun isBookDownloaded(bookId: Int): Boolean
+    suspend fun updateBookDownloadStatus(bookId: Int, isDownloaded: Boolean, localFilePath: String?) // <--- НОВЫЙ МЕТОД
 }
 
 interface NoteRepository {

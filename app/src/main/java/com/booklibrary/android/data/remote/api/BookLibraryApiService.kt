@@ -48,7 +48,7 @@ interface BookLibraryApiService {
     @DELETE("api/notes/{id}")
     suspend fun deleteNote(@Path("id") noteId: Int): Response<ApiResponse<String>>
 
-    @GET("download/{id}")
+    @GET("api/books/{id}/download")
     @Streaming
     suspend fun downloadEpub(@Path("id") bookId: Int): Response<ResponseBody>
 

@@ -51,13 +51,6 @@ class DeleteBookmarkUseCase @Inject constructor(
     }
 }
 
-class DownloadBookUseCase @Inject constructor(
-    private val repository: BookRepository
-) {
-    suspend operator fun invoke(bookId: Int): Flow<DownloadProgress> {
-        return repository.downloadBook(bookId)
-    }
-}
 
 class GetNotesUseCase @Inject constructor(
     private val repository: NoteRepository

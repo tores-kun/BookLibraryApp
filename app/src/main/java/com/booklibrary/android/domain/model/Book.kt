@@ -59,9 +59,4 @@ enum class ReaderTheme(val value: String) {
     SEPIA("sepia")
 }
 
-data class DownloadProgress(
-    val bookId: Int,
-    val progress: Float,
-    val isComplete: Boolean = false,
-    val error: String? = null
-)
+// Старое определение DownloadProgress было здесь и удалено

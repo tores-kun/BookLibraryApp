@@ -15,8 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.CheckCircle 
+import androidx.compose.material.icons.filled.Download 
+import androidx.compose.material.icons.filled.ErrorOutline 
+import androidx.compose.material.icons.filled.Launch 
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,7 +60,7 @@ fun SearchBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GenreFilterChips(
-    genres: List<String>, // <--- ПАРАМЕТР ДОБАВЛЕН
+    genres: List<String>,
     selectedGenre: String?,
     onGenreSelected: (String?) -> Unit,
     modifier: Modifier = Modifier
@@ -68,16 +70,14 @@ fun GenreFilterChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) {
-        // Чип "Все" для сброса фильтра
-        item { // Добавляем "Все" как отдельный item, чтобы он всегда был первым
+        item {
             FilterChip(
-                selected = selectedGenre == null, 
-                onClick = { onGenreSelected(null) }, 
+                selected = selectedGenre == null,
+                onClick = { onGenreSelected(null) },
                 label = { Text("Все") }
             )
         }
-        // Динамические чипы для жанров из ViewModel
-        items(genres) { genre -> 
+        items(genres) { genre ->
             FilterChip(
                 selected = selectedGenre == genre,
                 onClick = { onGenreSelected(genre) },
@@ -93,7 +93,7 @@ fun BookCard(
     book: Book,
     onClick: () -> Unit,
     onBookmarkToggle: () -> Unit,
-    onDownload: () -> Unit,
+    onActionClick: () -> Unit, // <--- ИЗМЕНЕНО: Добавлен onActionClick
     downloadProgress: DownloadProgress?,
     modifier: Modifier = Modifier
 ) {
@@ -103,7 +103,8 @@ fun BookCard(
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top 
         ) {
             AsyncImage(
                 model = book.coverUrl,
@@ -136,9 +137,9 @@ fun BookCard(
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 4.dp)
                 )
-                book.bookmark?.let { bookmark ->
+                book.bookmark?.let {
                     Text(
-                        text = "Статус: ${bookmark.status.value}",
+                        text = "Статус: ${it.status.value}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(top = 2.dp)
@@ -147,46 +148,56 @@ fun BookCard(
             }
 
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                verticalArrangement = Arrangement.SpaceBetween, 
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.height(90.dp) 
             ) {
                 IconButton(onClick = onBookmarkToggle) {
                     Icon(
-                        imageVector = if (book.bookmark != null) {
-                            Icons.Filled.Bookmark
-                        } else {
-                            Icons.Filled.BookmarkBorder
-                        },
+                        imageVector = if (book.bookmark != null) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                         contentDescription = "Закладка",
-                        tint = if (book.bookmark != null) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        }
+                        tint = if (book.bookmark != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                     )
                 }
 
-                if (!book.isDownloaded) {
-                    downloadProgress?.let { progress ->
-                        CircularProgressIndicator(
-                            progress = progress.progress,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } ?: run {
-                        IconButton(onClick = onDownload) {
+                // Логика отображения кнопки Скачать/Прогресс/Открыть/Ошибка
+                when {
+                    downloadProgress?.error != null -> {
+                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
                             Icon(
-                                Icons.Filled.Download,
-                                contentDescription = "Скачать"
+                                Icons.Filled.ErrorOutline,
+                                contentDescription = "Ошибка загрузки",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
-                } else {
-                    Icon(
-                        Icons.Filled.CheckCircle,
-                        contentDescription = "Скачано",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    downloadProgress?.isLoading == true && !downloadProgress.isComplete -> {
+                        CircularProgressIndicator(
+                            progress = downloadProgress.progress,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp 
+                        )
+                    }
+                    book.isDownloaded && !book.localFilePath.isNullOrBlank() -> {
+                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
+                            Icon(
+                                Icons.Filled.Launch, 
+                                contentDescription = "Открыть книгу",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    else -> {
+                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
+                            Icon(
+                                Icons.Filled.Download,
+                                contentDescription = "Скачать",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

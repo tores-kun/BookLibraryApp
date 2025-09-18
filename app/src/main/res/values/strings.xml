@@ -63,6 +63,7 @@
     <string name="download_complete">Скачивание завершено</string>
     <string name="download_error">Ошибка скачивания</string>
     <string name="already_downloaded">Уже скачано</string>
+    <string name="no_books_found">Книги не найдены</string>
 
     <!-- Notes -->
     <string name="notes">Заметки</string>
