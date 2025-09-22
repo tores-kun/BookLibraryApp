@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 // Определение UiState для CatalogScreen
 data class CatalogUiState(
-    val isLoading: Boolean = true,
+    val isListRefreshing: Boolean = true, // ИЗМЕНЕНО: isLoading -> isListRefreshing
     val books: List<Book> = emptyList(),
     val error: String? = null,
     val downloadProgress: Map<Int, DownloadProgress> = emptyMap() // Int это bookId
@@ -36,11 +36,11 @@ class CatalogViewModel @Inject constructor(
     private val downloadBookUseCase: DownloadBookUseCase,
     private val getGenresUseCase: GetGenresUseCase,
     private val refreshGenresUseCase: RefreshGenresUseCase,
-    private val refreshBooksUseCase: RefreshBooksUseCase,
+    // private val refreshBooksUseCase: RefreshBooksUseCase, // Используем bookRepository.refreshBooks()
     private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CatalogUiState()) // Используем восстановленный CatalogUiState
+    private val _uiState = MutableStateFlow(CatalogUiState()) 
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -77,6 +77,9 @@ class CatalogViewModel @Inject constructor(
         _sortOrder,
         _sortDirection
     ) { query, genre, sort, order ->
+        // При изменении любого из этих параметров, booksFlow будет пересобираться
+        // и инициировать новую загрузку данных, что должно установить isListRefreshing = true
+        // Однако, прямое управление isListRefreshing здесь сложно, лучше делать это перед запросом
         getBooksUseCase(
             query = if (query.isBlank()) null else query,
             genre = genre,
@@ -86,7 +89,7 @@ class CatalogViewModel @Inject constructor(
     }.flatMapLatest { it }
 
     init {
-        _uiState.update { it.copy(isLoading = true) }
+        _uiState.update { it.copy(isListRefreshing = true) } // ИЗМЕНЕНО
         viewModelScope.launch {
             try {
                 refreshGenresUseCase()
@@ -94,42 +97,46 @@ class CatalogViewModel @Inject constructor(
                 _uiState.update { it.copy(error = "Ошибка обновления списка жанров: ${e.message}") }
             }
         }
+        loadBooks()
+    }
+    
+    private fun loadBooks() {
+         // isListRefreshing должен быть true перед началом сбора booksFlow
+        _uiState.update { it.copy(isListRefreshing = true, error = null) } // ИЗМЕНЕНО: Устанавливаем при каждой загрузке списка
         viewModelScope.launch {
             booksFlow
                 .catch { exception ->
                     _uiState.update { currentState ->
-                        currentState.copy(isLoading = false, error = "Ошибка при загрузке книг: ${exception.message}")
+                        currentState.copy(isListRefreshing = false, error = "Ошибка при загрузке книг: ${exception.message}") // ИЗМЕНЕНО
                     }
-                    // Не эмитируем пустой список, чтобы не сбрасывать данные при временной ошибке
                 }
                 .collect { bookList ->
                     _uiState.update { currentState ->
-                        currentState.copy(isLoading = false, books = bookList)
+                        currentState.copy(isListRefreshing = false, books = bookList) // ИЗМЕНЕНО
                     }
                 }
         }
     }
-    
+
     fun onRefreshTriggered() {
-        _uiState.update { it.copy(isLoading = true, error = null) } 
+        // isListRefreshing = true устанавливается в loadBooks(), который будет вызван из-за обновления booksFlow
+        // или напрямую, если refreshBooks() не триггерит booksFlow (что маловероятно с Room)
+        _uiState.update { it.copy(isListRefreshing = true, error = null) } // ИЗМЕНЕНО: Явно ставим флаг обновления
         viewModelScope.launch {
             try {
                 refreshGenresUseCase() 
             } catch (e: Exception) {
+                // Ошибка жанров не должна останавливать обновление книг или сбрасывать isListRefreshing
                 _uiState.update { it.copy(error = "Ошибка обновления списка жанров: ${e.message}") }
             }
             try {
-                // refreshBooksUseCase() // Этот use case должен обновить книги в БД, что вызовет обновление Flow `books`
-                // Вместо прямого вызова refreshBooksUseCase(), который возвращает Unit,
-                // лучше вызвать метод репозитория, который может генерировать исключения, если есть.
-                // Однако, refreshBooksUseCase уже должен использовать refreshBooksWithParams из репозитория.
-                // Основная задача - чтобы booksFlow был пересобран или получил новые данные.
-                // Если refreshBooksUseCase обновляет БД, booksFlow автоматически это подхватит.
-                bookRepository.refreshBooks() // Вызываем метод репозитория напрямую для ясности или используем UseCase
+                bookRepository.refreshBooks() // Это должно триггерить booksFlow, который установит isListRefreshing = false
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Ошибка обновления списка книг: ${e.message}") }
+                _uiState.update { it.copy(isListRefreshing = false, error = "Ошибка обновления списка книг: ${e.message}") } // ИЗМЕНЕНО
             }
-            // isLoading станет false, когда Flow `booksFlow` эмитирует новые данные
+            // Если booksFlow не эмитит после bookRepository.refreshBooks() (например, нет изменений),
+            // isListRefreshing может остаться true. Поэтому loadBooks() вызывается в onSearchQueryChange и onGenreFilterChange.
+            // В данном случае, booksFlow должен эмитить и установить isListRefreshing = false.
         }
     }
 
@@ -137,14 +144,14 @@ class CatalogViewModel @Inject constructor(
         val currentBookProgress = _uiState.value.downloadProgress[book.id]
 
         if (currentBookProgress?.isLoading == true) {
-            return // Уже грузится, ничего не делаем
+            return 
         }
 
-        // Если была ошибка для этой книги, пробуем снова
         if (currentBookProgress?.error != null) {
              _uiState.update { currentState ->
                 val newProgressMap = currentState.downloadProgress.toMutableMap()
-                newProgressMap.remove(book.id) // Удаляем старую ошибку перед повторной попыткой
+                newProgressMap.remove(book.id) 
+                // Не меняем isListRefreshing здесь
                 currentState.copy(downloadProgress = newProgressMap, error = "Повторная попытка загрузки для ${book.title}...")
             }
             downloadBookInternal(book)
@@ -157,14 +164,16 @@ class CatalogViewModel @Inject constructor(
                 if (isFileStillValid) {
                     _openFileEvent.emit(book.localFilePath!!)
                 } else {
-                    _uiState.update { it.copy(error = "Файл для ${book.title} не найден. Начинаю загрузку...") }
-                    // Важно: обновить статус в БД, чтобы UI не показывал "Открыть" невалидный файл
+                    _uiState.update { 
+                        // Не меняем isListRefreshing здесь
+                        it.copy(error = "Файл для ${book.title} не найден. Начинаю загрузку...") 
+                    }
                     bookRepository.updateBookDownloadStatus(book.id, false, null) 
                     downloadBookInternal(book)
                 }
             }
         } else {
-            _uiState.update { it.copy(error = null) } // Очищаем общую ошибку, если начинаем новую загрузку
+             // _uiState.update { it.copy(error = null) } // Очистка общей ошибки здесь может быть нежелательна
             downloadBookInternal(book)
         }
     }
@@ -178,52 +187,107 @@ class CatalogViewModel @Inject constructor(
             _uiState.update { currentState ->
                 val newProgressMap = currentState.downloadProgress.toMutableMap()
                 newProgressMap[book.id] = DownloadProgress(bookId = book.id, progress = 0f, isLoading = true, error = null, filePathUri = null, wasAlreadyDownloaded = false)
-                currentState.copy(downloadProgress = newProgressMap, error = null) 
+                // НЕ меняем isListRefreshing
+                currentState.copy(downloadProgress = newProgressMap) 
             }
 
             downloadBookUseCase(book.id).collect { progress ->
                 _uiState.update { currentState ->
                     val newProgressMap = currentState.downloadProgress.toMutableMap()
                     newProgressMap[book.id] = progress
-                    currentState.copy(downloadProgress = newProgressMap)
+                    // НЕ меняем isListRefreshing
+                    var currentGlobalError = currentState.error
+                    if (progress.error != null && currentState.error == null) { // Показываем ошибку загрузки книги, если нет глобальной
+                        currentGlobalError = "Ошибка загрузки ${book.title}: ${progress.error}"
+                    }
+                    currentState.copy(downloadProgress = newProgressMap, error = currentGlobalError)
                 }
-                if (progress.error != null) {
-                    _uiState.update { it.copy(error = "Ошибка загрузки ${book.title}: ${progress.error}") }
-                }
-                // Обновление списка books произойдет автоматически через booksFlow, если BookRepository корректно обновляет DAO
             }
         }
     }
     
-    fun requestDownload(book: Book) { // Оставим на случай, если где-то еще используется
-        downloadBookInternal(book)
-    }
-
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
+        // loadBooks() // Перезапускаем загрузку списка, это установит isListRefreshing
     }
 
     fun onGenreFilterChange(genre: String?) {
         _selectedGenre.value = genre
+        // loadBooks() // Перезапускаем загрузку списка, это установит isListRefreshing
     }
 
+    // При смене сортировки также нужно перезагрузить книги
     fun onSortChange(sort: String, order: String) {
         _sortOrder.value = sort
         _sortDirection.value = order
+        // loadBooks() // Перезапускаем загрузку списка, это установит isListRefreshing
     }
+
+    // Эффект от combine для searchQuery, selectedGenre, sortOrder, sortDirection должен теперь управлять isListRefreshing
+    // Добавим отдельный StateFlow для индикации того, что параметры изменились и нужна перезагрузка
+    private val _listParametersChanged = MutableStateFlow(0) // Просто для триггера
+
+    // Пересмотренная логика для booksFlow и isListRefreshing
+    // Вместо прямого вызова loadBooks(), используем Flow для управления состоянием загрузки списка
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val booksTriggerFlow = combine(_searchQuery, _selectedGenre, _sortOrder, _sortDirection) { q, g, s, o -> 
+        Triple(q,g, Pair(s,o)) // Просто для того, чтобы combine эмитил при любом изменении
+    }.onEach {
+        _uiState.update { it.copy(isListRefreshing = true, error = null) } // Устанавливаем флаг перед загрузкой
+    }
+
+    private val booksDataFlow: Flow<List<Book>> = booksTriggerFlow.flatMapLatest { (query, genre, sortPair) ->
+        getBooksUseCase(
+            query = if (query.isBlank()) null else query,
+            genre = genre,
+            sort = sortPair.first,
+            order = sortPair.second
+        )
+    }
+
+    // Инициализация сбора основного потока данных
+    // Этот init блок должен быть после определения booksDataFlow
+    // Мы уже имеем init, нужно интегрировать туда.
+    // Вместо предыдущего init -> loadBooks(), сделаем так:
+    // (Старый init остается для refreshGenres, новый init для booksDataFlow)
+    // Лучше объединить
+
+    // Объединенный init:
+    // init {
+    //     _uiState.update { it.copy(isListRefreshing = true) } // Начальная установка
+    //     viewModelScope.launch {
+    //         try {
+    //             refreshGenresUseCase()
+    //         } catch (e: Exception) {
+    //             _uiState.update { it.copy(error = "Ошибка обновления списка жанров: ${e.message}") }
+    //         }
+    //     }
+    //     viewModelScope.launch { // Запуск сбора данных о книгах
+    //         booksDataFlow
+    //             .catch { exception ->
+    //                 _uiState.update { currentState ->
+    //                     currentState.copy(isListRefreshing = false, error = "Ошибка при загрузке книг: ${exception.message}")
+    //                 }
+    //             }
+    //             .collect { bookList ->
+    //                 _uiState.update { currentState ->
+    //                     currentState.copy(isListRefreshing = false, books = bookList)
+    //                 }
+    //             }
+    //     }
+    // }
+    // Переделанный init внизу, чтобы все Flow были определены.
+
 
     fun toggleBookmark(book: Book) {
         viewModelScope.launch {
             try {
-                // Используем uiState.books, так как это наиболее актуальный список на UI
                 val currentBookInUi = _uiState.value.books.find { it.id == book.id } ?: book
-
                 if (currentBookInUi.bookmark != null) {
                     deleteBookmarkUseCase(book.id)
                 } else {
                     createBookmarkUseCase(book.id, "reading", 1) 
                 }
-                // booksFlow должен автоматически обновиться после изменения в BookmarkDao
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Ошибка закладки: ${e.message}") }
             }
@@ -231,7 +295,41 @@ class CatalogViewModel @Inject constructor(
     }
 
     fun clearError() {
+        // Если ошибка была от загрузки книги, не очищаем downloadProgress.error
+        // Только глобальную ошибку
         _uiState.update { it.copy(error = null) }
+    }
+
+    // Пересмотренный init, чтобы все было в одном месте и правильно настроено
+    init {
+        // 1. Начальная установка состояния
+        _uiState.update { it.copy(isListRefreshing = true) } 
+
+        // 2. Загрузка/обновление жанров (однократно или по необходимости)
+        viewModelScope.launch {
+            try {
+                refreshGenresUseCase()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Ошибка обновления списка жанров: ${e.message}") } // isListRefreshing не меняем здесь
+            }
+        }
+
+        // 3. Запуск сбора данных о книгах, который реагирует на изменения параметров
+        viewModelScope.launch {
+            booksDataFlow
+                .catch { exception ->
+                    _uiState.update { currentState ->
+                        // isListRefreshing уже должен быть true из booksTriggerFlow.onEach
+                        currentState.copy(isListRefreshing = false, error = "Ошибка при загрузке книг: ${exception.message}")
+                    }
+                }
+                .collect { bookList ->
+                    _uiState.update { currentState ->
+                        // isListRefreshing уже должен быть true из booksTriggerFlow.onEach
+                        currentState.copy(isListRefreshing = false, books = bookList, error = if (bookList.isEmpty() && currentState.error == null && !(_searchQuery.value.isBlank() && _selectedGenre.value == null)) "Книги не найдены по вашему запросу" else currentState.error)
+                    }
+                }
+        }
     }
 }
 
@@ -298,10 +396,8 @@ class BookDetailsViewModel @Inject constructor(
         }
     }
     
-    // Переименовано для консистентности и чтобы не было путаницы с downloadBookUseCase
     private fun downloadBookInternal() {
         val bookToDownload = _uiState.value.book ?: return
-        // Проверка, не идет ли уже загрузка для этой книги
         if (_uiState.value.downloadProgress?.isLoading == true && _uiState.value.downloadProgress?.bookId == bookToDownload.id) {
             return 
         }
@@ -314,14 +410,10 @@ class BookDetailsViewModel @Inject constructor(
                 _uiState.update { currentState -> 
                     currentState.copy(downloadProgress = progress)
                 }
-                // Если загрузка успешно завершена (и это не была "уже загруженная" книга),
-                // BookRepositoryImpl.downloadBook уже обновил БД.
-                // Мы должны перезагрузить book в uiState, чтобы получить обновленный isDownloaded и localFilePath.
                 if (progress.isComplete && !progress.isLoading && progress.error == null && !progress.wasAlreadyDownloaded) {
                     loadBook(bookToDownload.id) 
                 }
                  if (progress.error != null) {
-                    // Ошибка уже будет в uiState.downloadProgress.error, также можно показать Toast
                      _uiState.update { it.copy(error = "Ошибка загрузки: ${progress.error}") }
                 }
             }

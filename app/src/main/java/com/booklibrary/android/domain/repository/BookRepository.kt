@@ -14,7 +14,7 @@ interface BookRepository {
 
     suspend fun getBookById(bookId: Int): Book?
     suspend fun refreshBooks()
-    suspend fun refreshGenres() // Added this method
+    suspend fun refreshGenres()
 
     fun getBookmarks(): Flow<List<Bookmark>>
     fun getBookmarksByStatus(status: String): Flow<List<Bookmark>>

@@ -27,7 +27,6 @@ import com.booklibrary.android.domain.model.DownloadProgress
 import com.booklibrary.android.presentation.viewmodel.BookDetailsViewModel
 import kotlinx.coroutines.flow.collectLatest
 
-// Helper function to open book file (can be moved to a util file if needed)
 private fun openBookFile(context: Context, filePath: String?) {
     filePath?.let {
         try {
@@ -35,7 +34,7 @@ private fun openBookFile(context: Context, filePath: String?) {
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(fileUri, "application/epub+zip")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Needed if starting from non-Activity context
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             // Verify that an app exists to receive the intent
             if (intent.resolveActivity(context.packageManager) != null) {
@@ -52,7 +51,6 @@ private fun openBookFile(context: Context, filePath: String?) {
             Toast.makeText(context, "Ошибка при открытии файла: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     } ?: run {
-        // This case should ideally not happen if logic is correct, but as a fallback:
         Toast.makeText(context, "Путь к файлу не указан", Toast.LENGTH_LONG).show()
     }
 }
@@ -62,7 +60,7 @@ private fun openBookFile(context: Context, filePath: String?) {
 fun BookDetailsScreen(
     bookId: Int,
     onBackClick: () -> Unit,
-    onReadClick: (Int) -> Unit, // Assuming this is for an internal reader
+    onReadClick: (Int) -> Unit,
     onNotesClick: (Int) -> Unit,
     viewModel: BookDetailsViewModel = hiltViewModel()
 ) {
@@ -73,18 +71,16 @@ fun BookDetailsScreen(
         viewModel.loadBook(bookId)
     }
 
-    // Collect open file events
     LaunchedEffect(Unit) {
         viewModel.openFileEvent.collectLatest { filePath ->
             openBookFile(context, filePath)
         }
     }
-    
-    // Display general errors or messages from ViewModel
+
     uiState.error?.let { errorMsg ->
-        LaunchedEffect(errorMsg) { // Re-show if error message content changes
+        LaunchedEffect(errorMsg) {
             Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
-            viewModel.clearError() // Clear error after showing
+            viewModel.clearError()
         }
     }
 
@@ -100,9 +96,7 @@ fun BookDetailsScreen(
             }
         )
 
-        // Main content area based on UI state
         if (uiState.isLoading && uiState.book == null) {
-            // Initial loading state or loading after an error where book is not yet available
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -110,8 +104,7 @@ fun BookDetailsScreen(
                 CircularProgressIndicator()
             }
         } else if (uiState.book != null) {
-            // Book data is available, display details
-            val book = uiState.book!! // Safe because of the check above
+            val book = uiState.book!!
             val downloadProgressForThisBook = if (uiState.downloadProgress?.bookId == book.id) {
                 uiState.downloadProgress
             } else {
@@ -247,8 +240,6 @@ fun BookDetailsScreen(
                 }
             }
         } else {
-            // This case means: book is null AND not (isLoading AND book == null)
-            // So, primarily, this means loading has finished and book was not found.
             Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                 Text(
                     text = "Книга не найдена", // TODO: Замените на stringResource(R.string.book_not_found_error) после добавления ресурса

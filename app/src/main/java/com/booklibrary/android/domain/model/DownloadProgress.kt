@@ -7,5 +7,5 @@ data class DownloadProgress(
     val isComplete: Boolean = false,
     val error: String? = null,
     val filePathUri: String? = null,
-    val wasAlreadyDownloaded: Boolean = false // <--- НОВОЕ ПОЛЕ
+    val wasAlreadyDownloaded: Boolean = false
 )

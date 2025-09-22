@@ -58,5 +58,3 @@ enum class ReaderTheme(val value: String) {
     DARK("dark"),
     SEPIA("sepia")
 }
-
-// Старое определение DownloadProgress было здесь и удалено

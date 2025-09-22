@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.CheckCircle 
 import androidx.compose.material.icons.filled.Download 
 import androidx.compose.material.icons.filled.ErrorOutline 
 import androidx.compose.material.icons.filled.Launch 
@@ -93,7 +92,7 @@ fun BookCard(
     book: Book,
     onClick: () -> Unit,
     onBookmarkToggle: () -> Unit,
-    onActionClick: () -> Unit, // <--- ИЗМЕНЕНО: Добавлен onActionClick
+    onActionClick: () -> Unit,
     downloadProgress: DownloadProgress?,
     modifier: Modifier = Modifier
 ) {
@@ -161,9 +160,12 @@ fun BookCard(
                 }
 
                 // Логика отображения кнопки Скачать/Прогресс/Открыть/Ошибка
+                val bookIsActuallyDownloaded = book.isDownloaded && !book.localFilePath.isNullOrBlank()
+                val progressIsComplete = downloadProgress?.isComplete == true && downloadProgress.error == null && downloadProgress.filePathUri != null
+
                 when {
                     downloadProgress?.error != null -> {
-                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
+                        IconButton(onClick = onActionClick) {
                             Icon(
                                 Icons.Filled.ErrorOutline,
                                 contentDescription = "Ошибка загрузки",
@@ -172,17 +174,17 @@ fun BookCard(
                             )
                         }
                     }
-                    downloadProgress?.isLoading == true && !downloadProgress.isComplete -> {
+                    downloadProgress?.isLoading == true -> {
                         CircularProgressIndicator(
-                            progress = downloadProgress.progress,
+                            progress = downloadProgress.progress, 
                             modifier = Modifier.size(24.dp),
                             strokeWidth = 2.dp 
                         )
                     }
-                    book.isDownloaded && !book.localFilePath.isNullOrBlank() -> {
-                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
+                    progressIsComplete || bookIsActuallyDownloaded -> {
+                        IconButton(onClick = onActionClick) {
                             Icon(
-                                Icons.Filled.Launch, 
+                                Icons.Filled.Launch,
                                 contentDescription = "Открыть книгу",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -190,7 +192,7 @@ fun BookCard(
                         }
                     }
                     else -> {
-                        IconButton(onClick = onActionClick) { // <--- ИЗМЕНЕНО: используется onActionClick
+                        IconButton(onClick = onActionClick) {
                             Icon(
                                 Icons.Filled.Download,
                                 contentDescription = "Скачать",

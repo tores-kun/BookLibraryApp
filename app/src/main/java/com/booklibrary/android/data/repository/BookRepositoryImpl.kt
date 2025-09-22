@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import androidx.core.net.toUri
+import androidx.core.net.toUri // Added for KTX extension
 import com.booklibrary.android.data.local.dao.*
 import com.booklibrary.android.data.local.entities.BookEntity
 import com.booklibrary.android.data.local.entity.BookGenreEntity
@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException // Added for explicit catch
 
 @Singleton
 class BookRepositoryImpl @Inject constructor(
@@ -52,25 +53,26 @@ class BookRepositoryImpl @Inject constructor(
         val contentDisposition = headers["Content-Disposition"]
         if (contentDisposition != null) {
             val patterns = listOf(
-                Regex("""filename\*="?'?UTF-8''([^";]+)"?'?"""),
-                Regex("""filename\s*=\s*"([^"]+)"""", RegexOption.IGNORE_CASE)
+                Regex("""filename\*="?'?UTF-8''([^";]+)"?'?"""), 
+                Regex("""filename\s*=\s*"([^"]+)"""", RegexOption.IGNORE_CASE) 
             )
             for (pattern in patterns) {
                 val match = pattern.find(contentDisposition)
                 if (match != null && match.groupValues.size > 1) {
-                    val filenameSource = match.groupValues[1] // Changed var to val
+                    val filenameSource = match.groupValues[1] 
                     var decodedFilename = filenameSource
                     val isFilenameStar = pattern.pattern.contains("filename*")
                     try {
                         if (isFilenameStar) {
                             decodedFilename = java.net.URLDecoder.decode(filenameSource, "UTF-8")
                         } else if (filenameSource.contains("%")) {
+                            // Also attempt to decode if it looks URL-encoded, even without filename*
                             decodedFilename = java.net.URLDecoder.decode(filenameSource, "UTF-8")
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "getFileNameFromHeaders: Error decoding '$filenameSource', using raw.", e)
                     }
-                    return File(decodedFilename).name
+                    return File(decodedFilename).name // Ensure only filename is returned, not path
                 }
             }
         }
@@ -112,8 +114,8 @@ class BookRepositoryImpl @Inject constructor(
         }
         return source.map { entities ->
             entities.map {
-                val genresValue = genreDao.getGenresForBook(it.id).map { g -> g.genreName } // Renamed to avoid conflict
-                val bookmarkValue = bookmarkDao.getBookmark(it.id)?.toDomain() // Renamed to avoid conflict
+                val genresValue = genreDao.getGenresForBook(it.id).map { g -> g.genreName } 
+                val bookmarkValue = bookmarkDao.getBookmark(it.id)?.toDomain() 
                 it.toDomain(genresValue, bookmarkValue)
             }
         }
@@ -195,8 +197,8 @@ class BookRepositoryImpl @Inject constructor(
         }
         entity?.let {
             val currentEntity = it
-            val genresValue = genreDao.getGenresForBook(currentEntity.id).map { g -> g.genreName } // Renamed
-            val bookmarkValue = bookmarkDao.getBookmark(currentEntity.id)?.toDomain() // Renamed
+            val genresValue = genreDao.getGenresForBook(currentEntity.id).map { g -> g.genreName } 
+            val bookmarkValue = bookmarkDao.getBookmark(currentEntity.id)?.toDomain() 
             if (isBookDownloaded(currentEntity.id)) {
                 val updatedEntity = bookDao.getBookById(currentEntity.id)!! 
                 return@withContext updatedEntity.toDomain(genresValue, bookmarkValue)
@@ -223,7 +225,7 @@ class BookRepositoryImpl @Inject constructor(
         if (filePath.isBlank()) return false
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && filePath.startsWith("content://")) {
-                context.contentResolver.openFileDescriptor(filePath.toUri(), "r")?.use { pfd -> // Used KTX .toUri()
+                context.contentResolver.openFileDescriptor(filePath.toUri(), "r")?.use { pfd -> 
                     return if (pfd.statSize > 0) true else {
                         Log.w(TAG, "verifyFilePath (Q+): File $filePath for book $bookIdForLog empty.")
                         false
@@ -245,8 +247,13 @@ class BookRepositoryImpl @Inject constructor(
     }
     
     private fun generateFallbackBookFileName(title: String, bookId: Int): String {
-        val cleanTitle = title.trim().replace(Regex("[^a-zA-Z0-9.-]+"), "_").take(50)
-        return "${cleanTitle}_${bookId}.epub"
+        var cleanTitle = title.trim().replace(Regex("[^a-zA-Z0-9._-]+[^a-zA-Z0-9_.-]*"), "_").take(50)
+        cleanTitle = cleanTitle.removePrefix("_").removeSuffix("_").trim('_')
+        if (cleanTitle.isBlank() || cleanTitle == "_") { 
+            return "book_${bookId}.epub"
+        }
+        // Avoid double underscore if cleanTitle ends with one and bookId is appended
+        return "${cleanTitle.removeSuffix("_")}_${bookId}.epub" 
     }
 
     private fun getCurrentFormattedDateString(): String {
@@ -257,37 +264,37 @@ class BookRepositoryImpl @Inject constructor(
         var bookEntity = bookDao.getBookById(bookId)
 
         if (bookEntity?.isDownloaded == true && !bookEntity.localFilePath.isNullOrBlank()) {
-            // Warning (260,56) fix: Removed !! from bookEntity.localFilePath
             if (verifyFilePath(bookEntity.localFilePath, bookId)) { 
                 Log.d(TAG, "isBookDownloaded: Book $bookId confirmed via DB path ${bookEntity.localFilePath}.")
                 return@withContext true
             } else {
                 Log.w(TAG, "isBookDownloaded: DB path ${bookEntity.localFilePath} for $bookId invalid. Correcting DB.")
                 bookDao.updateBook(bookEntity.copy(isDownloaded = false, localFilePath = null))
-                bookEntity = bookEntity.copy(isDownloaded = false, localFilePath = null)
+                bookEntity = bookEntity.copy(isDownloaded = false, localFilePath = null) 
             }
         }
 
-        val titleForFallback: String?
+        var determinedTitleForFallback: String? = null 
+
         if (bookEntity == null) {
             Log.d(TAG, "isBookDownloaded: Book $bookId not in DB. Fetching title from server for fallback filename.")
-            titleForFallback = try { apiService.getBookById(bookId).body()?.title } catch (_: Exception) { null } 
-            if (titleForFallback.isNullOrBlank()) {
-                Log.w(TAG, "isBookDownloaded: Could not get title for $bookId from server for fallback. Cannot check.")
-                return@withContext false
+            determinedTitleForFallback = try { apiService.getBookById(bookId).body()?.title } catch (_: Exception) { null }
+        } else {
+            if (!bookEntity.title.isNullOrBlank()) {
+                determinedTitleForFallback = bookEntity.title
+                Log.d(TAG, "isBookDownloaded: Using DB title '${bookEntity.title}' for book $bookId for fallback check.")
+            } else {
+                Log.d(TAG, "isBookDownloaded: DB title for $bookId is blank. Fetching from server for fallback check.")
+                determinedTitleForFallback = try { apiService.getBookById(bookId).body()?.title } catch (_: Exception) { null }
             }
-        } else { 
-            Log.d(TAG, "isBookDownloaded: Book $bookId in DB, using its title or fetching fresh server title for fallback.")
-            val serverTitle = try { apiService.getBookById(bookId).body()?.title } catch (_: Exception) { null } 
-            titleForFallback = serverTitle ?: bookEntity.title
         }
         
-        if (titleForFallback.isNullOrBlank()) {
-             Log.w(TAG, "isBookDownloaded: No title available for book $bookId (local or server). Cannot generate fallback filename.")
+        if (determinedTitleForFallback.isNullOrBlank()) {
+             Log.w(TAG, "isBookDownloaded: Ultimately, no title available for book $bookId. Cannot generate fallback filename.")
             return@withContext false
         }
 
-        val fallbackFileName = generateFallbackBookFileName(titleForFallback, bookId)
+        val fallbackFileName = generateFallbackBookFileName(determinedTitleForFallback, bookId)
         Log.d(TAG, "isBookDownloaded: Trying fallback check for $bookId with filename: $fallbackFileName")
 
         var foundValidFallbackPath: String? = null
@@ -328,7 +335,7 @@ class BookRepositoryImpl @Inject constructor(
             Log.i(TAG, "isBookDownloaded: Fallback file found for $bookId at $foundValidFallbackPath. Updating DB.")
             val entityToUpsert = bookEntity ?: BookEntity(
                 id = bookId, 
-                title = titleForFallback, 
+                title = determinedTitleForFallback, 
                 description = "",
                 chapterCount = 0,
                 coverUrl = null,
@@ -359,12 +366,32 @@ class BookRepositoryImpl @Inject constructor(
         Log.d(TAG, "downloadBook: Starting for $bookId")
         if (isBookDownloaded(bookId)) {
             val confirmedBookEntity = withContext(Dispatchers.IO) { bookDao.getBookById(bookId)!! } 
-            Log.i(TAG, "downloadBook: Book $bookId already downloaded and valid at ${confirmedBookEntity.localFilePath}.")
-            emit(DownloadProgress(bookId, 1f, true, false, confirmedBookEntity.localFilePath, null, true))
+            val successProgress = DownloadProgress(
+                bookId = bookId, 
+                progress = 1f, 
+                isLoading = false, 
+                isComplete = true, 
+                filePathUri = confirmedBookEntity.localFilePath, 
+                error = null, 
+                wasAlreadyDownloaded = true
+            )
+            Log.i(TAG, "downloadBook $bookId: Book already downloaded. Emitting: $successProgress")
+            emit(successProgress)
             return@flow
         }
-        emit(DownloadProgress(bookId, 0f, false, true, null, null, false))
-        // Warning (367,45) fix: Initializer removed
+        
+        val initialProgress = DownloadProgress(
+            bookId = bookId, 
+            progress = 0f, 
+            isLoading = true, 
+            isComplete = false, 
+            filePathUri = null, 
+            error = null, 
+            wasAlreadyDownloaded = false
+        )
+        Log.d(TAG, "downloadBook $bookId: Emitting initial loading state: $initialProgress")
+        emit(initialProgress)
+        
         var bookTitleForFileName: String?
 
         try {
@@ -413,18 +440,29 @@ class BookRepositoryImpl @Inject constructor(
                     while (bytes >= 0) {
                         outputStream.write(buffer, 0, bytes)
                         bytesCopied += bytes
-                        val progress = if (contentLength > 0) bytesCopied.toFloat() / contentLength.toFloat() else -1f
-                        emit(DownloadProgress(bookId, progress, false, true, finalFilePath, null, false))
+                        val currentProgressVal = if (contentLength > 0) bytesCopied.toFloat() / contentLength.toFloat() else 0f // Progress can be 0 if contentLength is 0
+                        val inProgress = DownloadProgress(
+                            bookId = bookId, 
+                            progress = currentProgressVal, 
+                            isLoading = true, 
+                            isComplete = false, 
+                            filePathUri = finalFilePath, // Keep filePathUri available during progress
+                            error = null, 
+                            wasAlreadyDownloaded = false
+                        )
+                        // Log.d(TAG, "downloadBook $bookId: Emitting in-progress: $inProgress") // УДАЛЕНО: подробное логирование прогресса
+                        emit(inProgress)
                         bytes = inputStream.read(buffer)
                     }
                     outputStream.flush()
 
                     if (finalFilePath == null) throw IOException("Saved path is null for $fileName")
                     
+                    Log.d(TAG, "downloadBook: About to update database for book $bookId with path $finalFilePath")
                     withContext(Dispatchers.IO) {
                         var entityToUpdate = bookDao.getBookById(bookId)
                         if (entityToUpdate == null) { 
-                           val serverBook = try { apiService.getBookById(bookId).body() } catch (_: Exception) { null } // Param e -> _
+                           val serverBook = try { apiService.getBookById(bookId).body() } catch (_: Exception) { null } 
                            if (serverBook != null) {
                                entityToUpdate = serverBook.toEntity().copy(isDownloaded = true, localFilePath = finalFilePath)
                                bookDao.insertBook(entityToUpdate)
@@ -449,19 +487,44 @@ class BookRepositoryImpl @Inject constructor(
                              bookDao.updateBook(entityToUpdate.copy(isDownloaded = true, localFilePath = finalFilePath))
                         }
                     }
-                    emit(DownloadProgress(bookId, 1f, true, false, finalFilePath, null, false))
+                    Log.d(TAG, "downloadBook: Database update complete for book $bookId.")
+                    val finalSuccessProgress = DownloadProgress(
+                        bookId = bookId, 
+                        progress = 1f, 
+                        isLoading = false, 
+                        isComplete = true, 
+                        filePathUri = finalFilePath, 
+                        error = null, 
+                        wasAlreadyDownloaded = false
+                    )
+                    Log.d(TAG, "downloadBook $bookId: Emitting final success: $finalSuccessProgress")
+                    emit(finalSuccessProgress)
 
                 } else throw IOException("Response body is null for $bookId")
             } else throw IOException("Network error ${netResponse.code()} for $bookId: ${netResponse.errorBody()?.string()}")
-        } catch (e: Exception) { // This is the 'e' for Warning (426,98)
-            Log.e(TAG, "downloadBook: Error for $bookId: ${e.message}", e) // 'e' is used here
+        } catch (e: Exception) {
+            if (e is CancellationException) {
+                Log.i(TAG, "downloadBook: Job for $bookId was cancelled.")
+                throw e 
+            }
+            Log.e(TAG, "downloadBook: Error for $bookId", e) 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && fileUri != null) {
                 try { context.contentResolver.delete(fileUri, null, null) } catch (_: Exception) { Log.e(TAG, "Error deleting MediaStore $fileUri") } 
             } else if (finalFilePath != null && !finalFilePath.startsWith("content://")) { 
                 try { File(finalFilePath).delete() } catch (_: Exception) { Log.e(TAG, "Error deleting file $finalFilePath") } 
             }
-            val prog = if(contentLength > 0 && bytesCopied > 0) (bytesCopied.toFloat() / contentLength.toFloat()) else 0f
-            emit(DownloadProgress(bookId, prog, false, false, null, e.localizedMessage ?: "Download failed", false)) // 'e' is used here
+            val errorProg = if(contentLength > 0 && bytesCopied > 0) (bytesCopied.toFloat() / contentLength.toFloat()) else 0f
+            val errorProgressState = DownloadProgress(
+                bookId = bookId, 
+                progress = errorProg, 
+                isLoading = false, 
+                isComplete = false, // Not complete if error occurred
+                filePathUri = null, // No valid path on error
+                error = e.localizedMessage ?: "Download failed", 
+                wasAlreadyDownloaded = false
+            )
+            Log.e(TAG, "downloadBook $bookId: Emitting error state due to exception: $errorProgressState")
+            emit(errorProgressState)
         } finally {
             inputStream?.close()
             outputStream?.close()
