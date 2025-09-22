@@ -10,7 +10,7 @@ import android.provider.MediaStore
 import android.util.Log
 import com.booklibrary.android.data.local.dao.*
 import com.booklibrary.android.data.local.entities.BookEntity
-import com.booklibrary.android.data.local.entity.BookGenreEntity
+import com.booklibrary.android.data.local.entity.BookGenreEntity // Corrected import
 import com.booklibrary.android.data.mapper.*
 import com.booklibrary.android.data.remote.api.BookLibraryApiService
 import com.booklibrary.android.domain.model.*
@@ -89,11 +89,33 @@ class BookRepositoryImpl @Inject constructor(
     override fun getBooks(
         query: String?, genre: String?, sort: String, order: String, bookmarkStatus: String?
     ): Flow<List<Book>> {
+        val daoSortColumn: String
+        // Параметр 'sort' приходит из ViewModel как "date_added" или "title"
+        // Мы должны преобразовать "date_added" в "dateAdded" (для BookEntity)
+        // или "b.dateAdded" (для запросов с JOIN, где BookEntity имеет алиас 'b')
+
+        if (sort == "date_added") { // Это значение приходит из CatalogViewModel
+            daoSortColumn = if (genre != null) "b.dateAdded" else "dateAdded"
+        } else if (sort == "title") {
+            daoSortColumn = if (genre != null) "b.title" else "title"
+        } else {
+            // Запасной вариант или обработка других потенциальных полей сортировки
+            // По умолчанию используем dateAdded, как наиболее вероятный случай, если 'sort' не 'title'
+            daoSortColumn = if (genre != null) "b.dateAdded" else "dateAdded"
+            Log.w(TAG, "getBooks: Unknown sort column '$sort', defaulting to '$daoSortColumn'")
+        }
+
         val source = when {
-            !query.isNullOrBlank() && genre != null -> bookDao.searchBooksByQueryAndGenre("%${query}%", genre)
-            !query.isNullOrBlank() -> bookDao.searchBooks("%${query}%")
-            genre != null -> bookDao.getBooksByGenre(genre)
-            else -> bookDao.getAllBooks()
+            !query.isNullOrBlank() && genre != null ->
+                bookDao.searchBooksByQueryAndGenre("%${query}%", genre, daoSortColumn, order)
+            !query.isNullOrBlank() ->
+                bookDao.searchBooks("%${query}%", daoSortColumn, order)
+            genre != null ->
+                bookDao.getBooksByGenre(genre, daoSortColumn, order)
+            else ->
+                // Используем getAllBooksSorted, так как BookViewModel всегда предоставляет sort и order.
+                // getAllBooks() в DAO теперь просто делегирует с "dateAdded", "desc".
+                bookDao.getAllBooksSorted(daoSortColumn, order)
         }
         return source.map { entities ->
             entities.map {
@@ -157,7 +179,7 @@ class BookRepositoryImpl @Inject constructor(
     }
 
     override suspend fun refreshBooks() {
-        refreshBooksWithParams(null, null, "date_added", "desc", null)
+        refreshBooksWithParams(null, null, "date_added", "desc", null) // Используем "date_added" как в ViewModel
     }
 
     override suspend fun getBookById(bookId: Int): Book? = withContext(Dispatchers.IO) {

@@ -1,51 +1,76 @@
 package com.booklibrary.android.data.local.dao
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 import com.booklibrary.android.data.local.entities.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookDao {
-    @Query("SELECT * FROM books")
-    fun getAllBooks(): Flow<List<BookEntity>>
 
     @Query("""
-        SELECT books.* FROM books
-        INNER JOIN book_genres ON books.id = book_genres.bookId
-        WHERE book_genres.genreName = :genreName
+        SELECT * FROM books
+        ORDER BY
+            CASE WHEN :sortColumn = 'dateAdded' AND :sortOrder = 'asc' THEN dateAdded END ASC,
+            CASE WHEN :sortColumn = 'dateAdded' AND :sortOrder = 'desc' THEN dateAdded END DESC,
+            CASE WHEN :sortColumn = 'title' AND :sortOrder = 'asc' THEN title END ASC,
+            CASE WHEN :sortColumn = 'title' AND :sortOrder = 'desc' THEN title END DESC
     """)
-    fun getBooksByGenre(genreName: String): Flow<List<BookEntity>>
+    fun getAllBooksSorted(sortColumn: String, sortOrder: String): Flow<List<BookEntity>>
+
+    // Используем dateAdded для сортировки по умолчанию
+    fun getAllBooks(): Flow<List<BookEntity>> = getAllBooksSorted("dateAdded", "desc")
+
+    @Query("""
+        SELECT * FROM books
+        WHERE title LIKE :query OR description LIKE :query
+        ORDER BY
+            CASE WHEN :sortColumn = 'dateAdded' AND :sortOrder = 'asc' THEN dateAdded END ASC,
+            CASE WHEN :sortColumn = 'dateAdded' AND :sortOrder = 'desc' THEN dateAdded END DESC,
+            CASE WHEN :sortColumn = 'title' AND :sortOrder = 'asc' THEN title END ASC,
+            CASE WHEN :sortColumn = 'title' AND :sortOrder = 'desc' THEN title END DESC
+    """)
+    fun searchBooks(query: String, sortColumn: String, sortOrder: String): Flow<List<BookEntity>>
+
+    @Query("""
+        SELECT b.* FROM books b JOIN book_genres bg ON b.id = bg.bookId
+        WHERE bg.genreName = :genreName
+        ORDER BY
+            CASE WHEN :sortColumn = 'b.dateAdded' AND :sortOrder = 'asc' THEN b.dateAdded END ASC,
+            CASE WHEN :sortColumn = 'b.dateAdded' AND :sortOrder = 'desc' THEN b.dateAdded END DESC,
+            CASE WHEN :sortColumn = 'b.title' AND :sortOrder = 'asc' THEN b.title END ASC,
+            CASE WHEN :sortColumn = 'b.title' AND :sortOrder = 'desc' THEN b.title END DESC
+    """)
+    fun getBooksByGenre(genreName: String, sortColumn: String, sortOrder: String): Flow<List<BookEntity>>
+
+    @Query("""
+        SELECT b.* FROM books b JOIN book_genres bg ON b.id = bg.bookId
+        WHERE (b.title LIKE :query OR b.description LIKE :query) AND bg.genreName = :genreName
+        ORDER BY
+            CASE WHEN :sortColumn = 'b.dateAdded' AND :sortOrder = 'asc' THEN b.dateAdded END ASC,
+            CASE WHEN :sortColumn = 'b.dateAdded' AND :sortOrder = 'desc' THEN b.dateAdded END DESC,
+            CASE WHEN :sortColumn = 'b.title' AND :sortOrder = 'asc' THEN b.title END ASC,
+            CASE WHEN :sortColumn = 'b.title' AND :sortOrder = 'desc' THEN b.title END DESC
+    """)
+    fun searchBooksByQueryAndGenre(query: String, genreName: String, sortColumn: String, sortOrder: String): Flow<List<BookEntity>>
 
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getBookById(bookId: Int): BookEntity?
 
-    @Query("SELECT * FROM books WHERE title LIKE :query OR description LIKE :query")
-    fun searchBooks(query: String): Flow<List<BookEntity>>
-
-    @Query("""
-        SELECT books.* FROM books
-        INNER JOIN book_genres ON books.id = book_genres.bookId
-        WHERE book_genres.genreName = :genreName AND (books.title LIKE :query OR books.description LIKE :query)
-    """)
-    fun searchBooksByQueryAndGenre(query: String, genreName: String): Flow<List<BookEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBooks(books: List<BookEntity>)
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBook(book: BookEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(books: List<BookEntity>)
 
     @Update
     suspend fun updateBook(book: BookEntity)
 
-    @Delete
-    suspend fun deleteBook(book: BookEntity)
+    @Query("DELETE FROM books WHERE id = :bookId")
+    suspend fun deleteBookById(bookId: Int)
 
-    @Query("DELETE FROM books") // Added this method
-    suspend fun deleteAllBooks() // Added this method
+    @Query("DELETE FROM books")
+    suspend fun clearAll()
 }
-
-// GenreDao interface was here and has been removed
 
 @Dao
 interface BookmarkDao {
