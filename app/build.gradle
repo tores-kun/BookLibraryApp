@@ -104,6 +104,11 @@ dependencies {
     // FolioReader - готовое решение EPUB читалки
     implementation 'com.github.folioreader:FolioReader-Android:0.5.4'
     implementation 'com.github.kittinunf:fuel:2.3.1'
+    implementation('nl.siegmann.epublib:epublib-core:3.1') {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+    }
+    implementation 'org.slf4j:slf4j-android:1.7.36'
+
 
     // HTML parsing (может пригодиться)
     implementation 'org.jsoup:jsoup:1.17.2'
@@ -112,7 +117,8 @@ dependencies {
     implementation 'commons-io:commons-io:2.15.1'
 
     // Security
-    implementation "androidx.security:security-crypto:1.0.0"
+    implementation "androidx.security:security-crypto:1.1.0"
+    implementation "androidx.security:security-crypto-ktx:1.1.0"
 
     // Testing
     testImplementation 'junit:junit:4.13.2'

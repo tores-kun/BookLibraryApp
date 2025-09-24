@@ -2,9 +2,12 @@ package com.booklibrary.android.di
 
 import android.content.Context
 import androidx.room.Room
-import com.booklibrary.android.data.local.BookDatabase
+import com.booklibrary.android.data.local.database.BookLibraryDatabase
 import com.booklibrary.android.data.local.dao.BookDao
-import com.booklibrary.android.data.local.dao.ReadingPositionDao
+import com.booklibrary.android.data.local.dao.GenreDao
+import com.booklibrary.android.data.local.dao.BookmarkDao
+import com.booklibrary.android.data.local.dao.NoteDao
+import com.booklibrary.android.data.local.dao.ReaderStateDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,17 +21,31 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideBookDatabase(@ApplicationContext context: Context): BookDatabase {
-        return BookDatabase.getDatabase(context)
+    fun provideBookLibraryDatabase(
+        @ApplicationContext context: Context
+    ): BookLibraryDatabase {
+        return Room.databaseBuilder(
+            context,
+            BookLibraryDatabase::class.java,
+            "book_library_database"
+        )
+            .addMigrations(BookLibraryDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
-    fun provideBookDao(database: BookDatabase): BookDao {
-        return database.bookDao()
-    }
+    fun provideBookDao(db: BookLibraryDatabase): BookDao = db.bookDao()
 
     @Provides
-    fun provideReadingPositionDao(database: BookDatabase): ReadingPositionDao {
-        return database.readingPositionDao()
-    }
+    fun provideGenreDao(db: BookLibraryDatabase): GenreDao = db.genreDao()
+
+    @Provides
+    fun provideBookmarkDao(db: BookLibraryDatabase): BookmarkDao = db.bookmarkDao()
+
+    @Provides
+    fun provideNoteDao(db: BookLibraryDatabase): NoteDao = db.noteDao()
+
+    @Provides
+    fun provideReaderStateDao(db: BookLibraryDatabase): ReaderStateDao = db.readerStateDao()
 }

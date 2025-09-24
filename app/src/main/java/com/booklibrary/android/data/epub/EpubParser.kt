@@ -4,6 +4,7 @@ import android.content.Context
 import nl.siegmann.epublib.epub.EpubReader
 import nl.siegmann.epublib.domain.Book
 import nl.siegmann.epublib.domain.SpineReference
+import nl.siegmann.epublib.domain.Resource
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import com.booklibrary.android.domain.model.ChapterContent

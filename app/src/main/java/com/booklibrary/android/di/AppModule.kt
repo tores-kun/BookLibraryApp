@@ -21,39 +21,6 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
-
-    @Provides
-    @Singleton
-    fun provideBookLibraryDatabase(@ApplicationContext context: Context): BookLibraryDatabase {
-        return Room.databaseBuilder(
-            context,
-            BookLibraryDatabase::class.java,
-            "book_library_database"
-        )
-        .addMigrations(BookLibraryDatabase.MIGRATION_1_2)
-        .fallbackToDestructiveMigration()
-        .build()
-    }
-
-    @Provides
-    fun provideBookDao(database: BookLibraryDatabase): BookDao = database.bookDao()
-
-    @Provides
-    fun provideGenreDao(database: BookLibraryDatabase): GenreDao = database.genreDao()
-
-    @Provides
-    fun provideBookmarkDao(database: BookLibraryDatabase): BookmarkDao = database.bookmarkDao()
-
-    @Provides
-    fun provideNoteDao(database: BookLibraryDatabase): NoteDao = database.noteDao()
-
-    @Provides
-    fun provideReaderStateDao(database: BookLibraryDatabase): ReaderStateDao = database.readerStateDao()
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
 object NetworkModule {
 
     @Provides

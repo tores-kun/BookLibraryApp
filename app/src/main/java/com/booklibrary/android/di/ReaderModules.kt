@@ -18,27 +18,6 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
-    
-    @Provides
-    @Singleton
-    fun provideBookDatabase(@ApplicationContext context: Context): BookDatabase {
-        return BookDatabase.getDatabase(context)
-    }
-    
-    @Provides
-    fun provideBookDao(database: BookDatabase): BookDao {
-        return database.bookDao()
-    }
-    
-    @Provides
-    fun provideReadingPositionDao(database: BookDatabase): ReadingPositionDao {
-        return database.readingPositionDao()
-    }
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
 object ReaderModule {
     
     @Provides
