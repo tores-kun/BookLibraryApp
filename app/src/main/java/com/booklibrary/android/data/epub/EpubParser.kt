@@ -7,7 +7,7 @@ import nl.siegmann.epublib.domain.SpineReference
 import nl.siegmann.epublib.domain.Resource
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import com.booklibrary.android.domain.model.ChapterContent
+import com.booklibrary.android.domain.model.1ChapterContent
 import com.booklibrary.android.domain.model.EpubBook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
