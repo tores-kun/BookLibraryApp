@@ -1,5 +1,6 @@
 package com.booklibrary.android.domain.model
 
+// Вернули к исходному состоянию - это доменная модель, а не Room Entity
 data class Book(
     val id: Int,
     val title: String,
@@ -11,8 +12,8 @@ data class Book(
     val translator: String,
     val status: String,
     val dateAdded: String,
-    val genres: List<String>,
-    val bookmark: Bookmark?,
+    val genres: List<String>, // Это поле будет заполняться из BookGenreEntity и GenreEntity
+    val bookmark: Bookmark?,   // Это поле будет заполняться из BookmarkEntity
     val localFilePath: String? = null,
     val isDownloaded: Boolean = false
 )

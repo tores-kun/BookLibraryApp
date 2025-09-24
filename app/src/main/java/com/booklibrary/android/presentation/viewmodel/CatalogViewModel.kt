@@ -17,17 +17,17 @@ data class CatalogUiState(
     val books: List<Book> = emptyList(),
     val error: String? = null,
     val downloadProgress: Map<Int, DownloadProgress> = emptyMap(),
-    val showLoadFromApiButton: Boolean = false 
+    val showLoadFromApiButton: Boolean = false
 )
 
 data class BookDetailsUiState(
     val isLoading: Boolean = false,
     val book: Book? = null,
     val error: String? = null,
-    val downloadProgress: DownloadProgress? = null 
+    val downloadProgress: DownloadProgress? = null
 )
 
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CatalogViewModel @Inject constructor(
     private val getBooksUseCase: GetBooksUseCase,
@@ -39,7 +39,7 @@ class CatalogViewModel @Inject constructor(
     private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CatalogUiState()) 
+    private val _uiState = MutableStateFlow(CatalogUiState())
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
@@ -47,7 +47,7 @@ class CatalogViewModel @Inject constructor(
 
     private val _selectedGenre = MutableStateFlow<String?>(null)
     val selectedGenreState: StateFlow<String?> = _selectedGenre.asStateFlow()
-    
+
     private val _openFileEvent = MutableSharedFlow<String>()
     val openFileEvent: SharedFlow<String> = _openFileEvent.asSharedFlow()
 
@@ -68,12 +68,12 @@ class CatalogViewModel @Inject constructor(
     private val _sortDirection = MutableStateFlow("desc")
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val booksTriggerFlow = combine(_searchQuery, _selectedGenre, _sortOrder, _sortDirection) { q, g, s, o -> 
+    private val booksTriggerFlow = combine(_searchQuery, _selectedGenre, _sortOrder, _sortDirection) { q, g, s, o ->
         Triple(q,g, Pair(s,o))
     }.onEach {
         _uiState.update { currentState ->
             currentState.copy(isListRefreshing = true, error = null, showLoadFromApiButton = false)
-        } 
+        }
     }
 
     private val booksDataFlow: Flow<List<Book>> = booksTriggerFlow.flatMapLatest { (query, genre, sortPair) ->
@@ -84,13 +84,13 @@ class CatalogViewModel @Inject constructor(
             order = sortPair.second
         )
     }
-    
+
     init {
         viewModelScope.launch {
             try {
                 refreshGenresUseCase()
             } catch (e: Exception) {
-                _uiState.update { currentState -> 
+                _uiState.update { currentState ->
                     currentState.copy(error = appendError(currentState.error, "Ошибка обновления списка жанров: ${e.message}"))
                 }
             }
@@ -101,21 +101,21 @@ class CatalogViewModel @Inject constructor(
                 .catch { exception ->
                     _uiState.update { currentState ->
                         currentState.copy(
-                            isListRefreshing = false, 
+                            isListRefreshing = false,
                             error = appendError(currentState.error, "Критическая ошибка при загрузке книг: ${exception.message}"),
-                            showLoadFromApiButton = false 
+                            showLoadFromApiButton = false
                         )
                     }
                 }
                 .collect { bookList ->
                     val isSearchOrFilterActive = !_searchQuery.value.isBlank() || _selectedGenre.value != null
                     val shouldShowButton = bookList.isEmpty() && !isSearchOrFilterActive
-                    val currentError = _uiState.value.error 
+                    val currentError = _uiState.value.error
 
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
-                            isListRefreshing = false, 
-                            books = bookList, 
+                            isListRefreshing = false,
+                            books = bookList,
                             error = currentError,
                             showLoadFromApiButton = shouldShowButton
                         )
@@ -125,16 +125,16 @@ class CatalogViewModel @Inject constructor(
     }
 
     fun onLoadFromApiClick() {
-        _uiState.update { 
-            it.copy(isListRefreshing = true, error = null, showLoadFromApiButton = false) 
+        _uiState.update {
+            it.copy(isListRefreshing = true, error = null, showLoadFromApiButton = false)
         }
         viewModelScope.launch {
             try {
-                bookRepository.refreshBooks() 
+                bookRepository.refreshBooks()
             } catch (e: Exception) {
                 _uiState.update { currentState ->
                     currentState.copy(
-                        isListRefreshing = false, 
+                        isListRefreshing = false,
                         error = appendError(currentState.error, "Ошибка принудительной загрузки книг с API: ${e.message}"),
                         showLoadFromApiButton = currentState.books.isEmpty() && _searchQuery.value.isBlank() && _selectedGenre.value == null
                     )
@@ -143,22 +143,22 @@ class CatalogViewModel @Inject constructor(
         }
     }
 
-    fun onRefreshTriggered() { 
+    fun onRefreshTriggered() {
         _uiState.update { it.copy(isListRefreshing = true, error = null, showLoadFromApiButton = false) }
         viewModelScope.launch {
             try {
-                refreshGenresUseCase() 
+                refreshGenresUseCase()
             } catch (e: Exception) {
                 _uiState.update { currentState ->
                      currentState.copy(error = appendError(currentState.error, "Ошибка обновления списка жанров: ${e.message}"))
                 }
             }
             try {
-                bookRepository.refreshBooks() 
+                bookRepository.refreshBooks()
             } catch (e: Exception) {
                 _uiState.update { currentState ->
                     currentState.copy(
-                        isListRefreshing = false, 
+                        isListRefreshing = false,
                         error = appendError(currentState.error, "Ошибка обновления списка книг: ${e.message}"),
                         showLoadFromApiButton = currentState.books.isEmpty() && _searchQuery.value.isBlank() && _selectedGenre.value == null
                     )
@@ -171,7 +171,7 @@ class CatalogViewModel @Inject constructor(
         val currentBookProgress = _uiState.value.downloadProgress[book.id]
 
         if (currentBookProgress?.isLoading == true) {
-            return 
+            return
         }
 
         if (currentBookProgress?.error != null) {
@@ -181,10 +181,10 @@ class CatalogViewModel @Inject constructor(
                 var updatedError = currentState.error
                 val bookSpecificError = "Ошибка загрузки ${book.title}: ${currentBookProgress.error}"
                 if (updatedError?.contains(bookSpecificError) == true) {
-                    updatedError = updatedError.replace(bookSpecificError, "").lines().joinToString("\n").trim().ifBlank { null } 
+                    updatedError = updatedError.replace(bookSpecificError, "").lines().joinToString("\n").trim().ifBlank { null }
                 }
                 currentState.copy(
-                    downloadProgress = newProgressMap, 
+                    downloadProgress = newProgressMap,
                     error = appendError(updatedError, "Повторная попытка загрузки для ${book.title}...")
                  )
             }
@@ -196,12 +196,12 @@ class CatalogViewModel @Inject constructor(
             viewModelScope.launch {
                 val isFileStillValid = bookRepository.isBookDownloaded(book.id)
                 if (isFileStillValid) {
-                    _openFileEvent.emit(book.localFilePath!!)
+                    _openFileEvent.emit(book.localFilePath)
                 } else {
-                    _uiState.update { currentState -> 
-                        currentState.copy(error = appendError(currentState.error, "Файл для ${book.title} не найден. Начинаю загрузку...")) 
+                    _uiState.update { currentState ->
+                        currentState.copy(error = appendError(currentState.error, "Файл для ${book.title} не найден. Начинаю загрузку..."))
                     }
-                    bookRepository.updateBookDownloadStatus(book.id, false, null) 
+                    bookRepository.updateBookDownloadStatus(book.id, false, null)
                     downloadBookInternal(book)
                 }
             }
@@ -219,7 +219,7 @@ class CatalogViewModel @Inject constructor(
             _uiState.update { currentState ->
                 val newProgressMap = currentState.downloadProgress.toMutableMap()
                 newProgressMap[book.id] = DownloadProgress(bookId = book.id, progress = 0f, isLoading = true, error = null, filePathUri = null, wasAlreadyDownloaded = false)
-                currentState.copy(downloadProgress = newProgressMap) 
+                currentState.copy(downloadProgress = newProgressMap)
             }
 
             downloadBookUseCase(book.id).collect { progress ->
@@ -229,7 +229,7 @@ class CatalogViewModel @Inject constructor(
                     var currentGlobalError = currentState.error
                     val bookSpecificErrorPrefix = "Ошибка загрузки ${book.title}"
                     if (currentGlobalError?.contains(bookSpecificErrorPrefix) == true) {
-                        currentGlobalError = currentGlobalError.lines().filterNot { it.startsWith(bookSpecificErrorPrefix) }.joinToString("\n").trim().ifBlank { null } 
+                        currentGlobalError = currentGlobalError.lines().filterNot { it.startsWith(bookSpecificErrorPrefix) }.joinToString("\n").trim().ifBlank { null }
                     }
                     if (progress.error != null) {
                         currentGlobalError = appendError(currentGlobalError, "$bookSpecificErrorPrefix: ${progress.error}")
@@ -239,7 +239,7 @@ class CatalogViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
     }
@@ -247,12 +247,7 @@ class CatalogViewModel @Inject constructor(
     fun onGenreFilterChange(genre: String?) {
         _selectedGenre.value = genre
     }
-    
-    fun onSortChange(sort: String, order: String) {
-        _sortOrder.value = sort
-        _sortDirection.value = order
-    }
-    
+
     fun toggleBookmark(book: Book) {
         viewModelScope.launch {
             try {
@@ -260,7 +255,7 @@ class CatalogViewModel @Inject constructor(
                 if (currentBookInUi.bookmark != null) {
                     deleteBookmarkUseCase(book.id)
                 } else {
-                    createBookmarkUseCase(book.id, "reading", 1) 
+                    createBookmarkUseCase(book.id, "reading", 1)
                 }
             } catch (e: Exception) {
                 _uiState.update { currentState ->
@@ -288,26 +283,26 @@ class BookDetailsViewModel @Inject constructor(
     private val createBookmarkUseCase: CreateBookmarkUseCase,
     private val deleteBookmarkUseCase: DeleteBookmarkUseCase,
     private val downloadBookUseCase: DownloadBookUseCase,
-    private val bookRepository: BookRepository 
+    private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BookDetailsUiState()) 
+    private val _uiState = MutableStateFlow(BookDetailsUiState())
     val uiState: StateFlow<BookDetailsUiState> = _uiState.asStateFlow()
 
-    private val _openFileEvent = MutableSharedFlow<String>() 
+    private val _openFileEvent = MutableSharedFlow<String>()
     val openFileEvent: SharedFlow<String> = _openFileEvent.asSharedFlow()
 
     fun loadBook(bookId: Int) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null, book = null, downloadProgress = null) } 
+            _uiState.update { it.copy(isLoading = true, error = null, book = null, downloadProgress = null) }
             try {
                 val book = getBookByIdUseCase(bookId)
-                _uiState.update { currentState -> 
-                    currentState.copy(isLoading = false, book = book) 
+                _uiState.update { currentState ->
+                    currentState.copy(isLoading = false, book = book)
                 }
             } catch (e: Exception) {
-                _uiState.update { currentState -> 
-                    currentState.copy(isLoading = false, error = e.message) 
+                _uiState.update { currentState ->
+                    currentState.copy(isLoading = false, error = e.message)
                 }
             }
         }
@@ -315,7 +310,7 @@ class BookDetailsViewModel @Inject constructor(
 
     fun handleOpenBookClick() {
         val currentBook = _uiState.value.book ?: return
-        val currentDownloadProgress = _uiState.value.downloadProgress 
+        val currentDownloadProgress = _uiState.value.downloadProgress
 
         if (currentDownloadProgress?.isLoading == true) {
             return
@@ -323,7 +318,7 @@ class BookDetailsViewModel @Inject constructor(
 
         if (currentDownloadProgress?.error != null) {
             _uiState.update { it.copy(downloadProgress = null, error = "Повторная попытка загрузки...") }
-            downloadBookInternal() 
+            downloadBookInternal()
             return
         }
 
@@ -331,37 +326,37 @@ class BookDetailsViewModel @Inject constructor(
             viewModelScope.launch {
                 val isFileStillValid = bookRepository.isBookDownloaded(currentBook.id)
                 if (isFileStillValid) {
-                    _openFileEvent.emit(currentBook.localFilePath!!)
+                    _openFileEvent.emit(currentBook.localFilePath)
                 } else {
                     _uiState.update { it.copy(error = "Файл не найден. Начинаю загрузку...") }
-                    bookRepository.updateBookDownloadStatus(currentBook.id, false, null) 
-                    val bookAfterStatusUpdate = bookRepository.getBookById(currentBook.id) 
-                    _uiState.update { it.copy(book = bookAfterStatusUpdate) } 
+                    bookRepository.updateBookDownloadStatus(currentBook.id, false, null)
+                    val bookAfterStatusUpdate = bookRepository.getBookById(currentBook.id)
+                    _uiState.update { it.copy(book = bookAfterStatusUpdate) }
                     downloadBookInternal()
                 }
             }
         } else {
-            _uiState.update { it.copy(error = null) } 
+            _uiState.update { it.copy(error = null) }
             downloadBookInternal()
         }
     }
-    
+
     private fun downloadBookInternal() {
         val bookToDownload = _uiState.value.book ?: return
         if (_uiState.value.downloadProgress?.isLoading == true && _uiState.value.downloadProgress?.bookId == bookToDownload.id) {
-            return 
+            return
         }
-        
+
         viewModelScope.launch {
-            _uiState.update { 
-                it.copy(downloadProgress = DownloadProgress(bookId = bookToDownload.id, progress = 0f, isLoading = true, error = null, filePathUri = null, wasAlreadyDownloaded = false)) 
+            _uiState.update {
+                it.copy(downloadProgress = DownloadProgress(bookId = bookToDownload.id, progress = 0f, isLoading = true, error = null, filePathUri = null, wasAlreadyDownloaded = false))
             }
             downloadBookUseCase(bookToDownload.id).collect { progress ->
-                _uiState.update { currentState -> 
+                _uiState.update { currentState ->
                     currentState.copy(downloadProgress = progress)
                 }
-                if (!progress.isLoading) { 
-                    loadBook(bookToDownload.id) 
+                if (!progress.isLoading) {
+                    loadBook(bookToDownload.id)
                 }
                  if (progress.error != null) {
                      _uiState.update { it.copy(error = "Ошибка загрузки: ${progress.error}") }
@@ -370,36 +365,12 @@ class BookDetailsViewModel @Inject constructor(
         }
     }
 
-    fun updateBookmarkStatus(status: String, chapter: Int) {
-        val book = _uiState.value.book ?: return
-        viewModelScope.launch {
-            try {
-                createBookmarkUseCase(book.id, status, chapter)
-                loadBook(book.id) 
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-            }
-        }
-    }
-
-    fun removeBookmark() {
-        val book = _uiState.value.book ?: return
-        viewModelScope.launch {
-            try {
-                deleteBookmarkUseCase(book.id)
-                loadBook(book.id) 
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-            }
-        }
-    }
-
     fun clearError() {
-        _uiState.update { 
+        _uiState.update {
             it.copy(
-                error = null, 
+                error = null,
                 downloadProgress = _uiState.value.downloadProgress?.copy(error = null)
-            ) 
+            )
         }
     }
 }

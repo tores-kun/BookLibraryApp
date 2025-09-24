@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Библиотека книг</string>
 
@@ -81,4 +80,11 @@
     <string name="loading">Загрузка...</string>
     <string name="no_data">Нет данных</string>
     <string name="retry">Повторить</string>
+    <string name="book_not_found_error">Книга не найдена</string>
+
+    <!-- Строки для Folioreader -->
+    <string name="menu_item_copy">Копировать</string>
+    <string name="menu_item_define">Определить</string>
+    <string name="menu_item_highlight">Выделить</string>
+    <string name="menu_item_share">Поделиться</string>
 </resources>

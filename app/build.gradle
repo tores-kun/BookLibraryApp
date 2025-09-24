@@ -62,15 +62,17 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.7.0'
     implementation 'androidx.activity:activity-compose:1.8.2'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
 
     // Compose
     implementation platform('androidx.compose:compose-bom:2023.10.01')
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material3:material3'
-    implementation 'androidx.compose.material:material' // Added for M2 components like pullRefresh (version from BOM)
-    implementation 'androidx.compose.material:material-icons-extended' // Version from BOM (was 1.5.4 explicitly)
+    implementation 'androidx.compose.material3:material3' // Для Compose Material 3 UI
+    implementation 'androidx.compose.material:material' // Для Compose Material 2 компонентов (как PullRefresh)
+    implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.navigation:navigation-compose:2.7.5'
 
     // ViewModel
@@ -99,14 +101,18 @@ dependencies {
     // Image loading
     implementation 'io.coil-kt:coil-compose:2.5.0'
 
-    // EPUB reader
-    implementation 'org.jsoup:jsoup:1.16.2'
-    implementation 'nl.siegmann.epublib:epublib-core:3.1'
+    // FolioReader - готовое решение EPUB читалки
+    implementation 'com.github.folioreader:FolioReader-Android:0.5.4'
+    implementation 'com.github.kittinunf:fuel:2.3.1'
 
+    // HTML parsing (может пригодиться)
+    implementation 'org.jsoup:jsoup:1.17.2'
+
+    // File operations
+    implementation 'commons-io:commons-io:2.15.1'
 
     // Security
     implementation "androidx.security:security-crypto:1.0.0"
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // Testing
     testImplementation 'junit:junit:4.13.2'

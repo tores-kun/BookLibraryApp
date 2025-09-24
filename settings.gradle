@@ -6,11 +6,12 @@ pluginManagement {
     }
 }
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS) // Keep this if you want strict repository declaration
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://github.com/psiegman/mvn-repo/raw/master/releases' } // Preserving this custom repo
+        maven { url 'https://github.com/psiegman/mvn-repo/raw/master/releases' }
+        maven { url 'https://jitpack.io' }
     }
 }
 

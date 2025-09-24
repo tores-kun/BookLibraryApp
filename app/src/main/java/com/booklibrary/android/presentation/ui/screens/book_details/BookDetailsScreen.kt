@@ -2,7 +2,7 @@ package com.booklibrary.android.presentation.ui.screens.book_details
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import android.net.Uri // Оставляем для типа Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -26,11 +26,13 @@ import com.booklibrary.android.R
 import com.booklibrary.android.domain.model.DownloadProgress 
 import com.booklibrary.android.presentation.viewmodel.BookDetailsViewModel
 import kotlinx.coroutines.flow.collectLatest
+import androidx.core.net.toUri // Для String.toUri()
+import java.util.Locale // Для Locale.getDefault()
 
 private fun openBookFile(context: Context, filePath: String?) {
     filePath?.let {
         try {
-            val fileUri = Uri.parse(it) 
+            val fileUri = it.toUri() // Используем KTX расширение
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(fileUri, "application/epub+zip")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -60,7 +62,7 @@ private fun openBookFile(context: Context, filePath: String?) {
 fun BookDetailsScreen(
     bookId: Int,
     onBackClick: () -> Unit,
-    onReadClick: (Int) -> Unit,
+    onReadClick: (bookId: Int, filePath: String) -> Unit, 
     onNotesClick: (Int) -> Unit,
     viewModel: BookDetailsViewModel = hiltViewModel()
 ) {
@@ -186,7 +188,10 @@ fun BookDetailsScreen(
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
-                        onClick = { onReadClick(book.id) }, 
+                        onClick = {
+                            // Используем !! так как enabled гарантирует, что localFilePath не null и не blank
+                            onReadClick(book.id, book.localFilePath!!)
+                        }, 
                         modifier = Modifier.fillMaxWidth(),
                         enabled = book.isDownloaded && !book.localFilePath.isNullOrBlank() 
                     ) {
@@ -214,7 +219,7 @@ fun BookDetailsScreen(
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(String.format("Загрузка %.0f%%", downloadProgressForThisBook.progress * 100))
+                                Text(String.format(Locale.getDefault(), "Загрузка %.0f%%", downloadProgressForThisBook.progress * 100))
                             }
                             book.isDownloaded && !book.localFilePath.isNullOrBlank() && downloadProgressForThisBook == null -> {
                                 Icon(Icons.Filled.Launch, contentDescription = null)
